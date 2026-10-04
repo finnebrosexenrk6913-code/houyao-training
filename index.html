@@ -1,0 +1,1423 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B1210" />
+  <title>后腰训练台</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0b1210;
+      --bg-2: #0f1a16;
+      --card: #15221c;
+      --card-2: #1a2c24;
+      --ink: #e8f5ee;
+      --muted: #8aa396;
+      --line: #24382e;
+      --green: #2dd46f;
+      --green-dim: #1a9a4c;
+      --green-soft: rgba(45, 212, 111, 0.14);
+      --amber: #f5b942;
+      --amber-soft: rgba(245, 185, 66, 0.14);
+      --danger: #f07178;
+      --radius: 18px;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #163026 0%, var(--bg) 55%) fixed;
+      color: var(--ink);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 96px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .banner {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border: 1px solid rgba(245, 185, 66, 0.28);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+    .banner.ok {
+      background: var(--green-soft);
+      color: var(--green);
+      border-color: rgba(45, 212, 111, 0.28);
+    }
+
+    /* Gate */
+    .gate {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .gate-card {
+      width: min(420px, 100%);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 28px 22px;
+      box-shadow: var(--shadow);
+    }
+    .gate-card h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      letter-spacing: 0.5px;
+    }
+    .gate-card p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+
+    /* Header */
+    header.top {
+      background: linear-gradient(145deg, #16382a, #0f241b 60%, #123024);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 20px 18px 18px;
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    header.top::after {
+      content: "";
+      position: absolute;
+      right: -30px;
+      top: -40px;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(45, 212, 111, 0.22), transparent 70%);
+      pointer-events: none;
+    }
+    .brand-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    header.top h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      letter-spacing: 0.5px;
+    }
+    header.top .sub {
+      margin: 0;
+      opacity: 0.88;
+      font-size: 13px;
+      color: #b7d4c3;
+    }
+    .streak-chip {
+      background: rgba(245, 185, 66, 0.16);
+      color: var(--amber);
+      border: 1px solid rgba(245, 185, 66, 0.3);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* Stats strip */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 14px 0 0;
+    }
+    .stat-card {
+      background: rgba(11, 18, 16, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat-card .num {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .stat-card .lbl {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      background: var(--green-soft);
+      color: var(--green);
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pill.amber {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    /* Nav */
+    .nav {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 14px;
+      width: min(720px, calc(100% - 24px));
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      background: rgba(21, 34, 28, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 8px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+      z-index: 20;
+    }
+    .nav button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 12px;
+      padding: 10px 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .nav button.active {
+      background: var(--green-soft);
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    /* Buttons & inputs */
+    .btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 15px;
+      cursor: pointer;
+      background: var(--green);
+      color: #062212;
+      font-weight: 800;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn.ghost {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+    .btn.block { width: 100%; }
+    .btn.small { padding: 8px 12px; font-size: 13px; border-radius: 12px; }
+    .btn.amber {
+      background: var(--amber);
+      color: #2a1c00;
+    }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 15px;
+      font-family: inherit;
+      background: var(--bg-2);
+      color: var(--ink);
+      outline: none;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--green-dim);
+      box-shadow: 0 0 0 3px rgba(45, 212, 111, 0.15);
+    }
+    textarea { resize: vertical; min-height: 72px; }
+    label.field {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 10px 0 4px;
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1 1 140px; }
+    .row > .btn, .row > .auto { flex: 0 0 auto; }
+
+    /* Progress */
+    .progress {
+      height: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 10px 0 6px;
+    }
+    .progress > div {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green-dim), var(--green));
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    /* Day / task */
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tab {
+      border: 1px solid var(--line);
+      background: var(--bg-2);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .tab.active {
+      background: var(--green);
+      color: #062212;
+      border-color: var(--green);
+      font-weight: 800;
+    }
+    .day {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: var(--bg-2);
+    }
+    .day.today {
+      border-color: rgba(45, 212, 111, 0.55);
+      background: linear-gradient(180deg, rgba(45, 212, 111, 0.10), var(--bg-2));
+    }
+    .day-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: baseline;
+    }
+    .day-head b { font-size: 14px; }
+    .day-head span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .task {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .task:first-of-type { border-top: 0; }
+    .task input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      margin-top: 1px;
+      accent-color: var(--green);
+      flex: 0 0 auto;
+      cursor: pointer;
+    }
+    .task span { font-size: 14px; }
+    .task.done span {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
+    /* Quick check-in */
+    .quick-task {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      text-align: left;
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      color: var(--ink);
+    }
+    .quick-task.done {
+      border-color: rgba(45, 212, 111, 0.45);
+      background: rgba(45, 212, 111, 0.08);
+    }
+    .quick-task .box {
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      border: 2px solid var(--muted);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      font-size: 16px;
+      font-weight: 800;
+      color: transparent;
+    }
+    .quick-task.done .box {
+      background: var(--green);
+      border-color: var(--green);
+      color: #062212;
+    }
+    .quick-task .txt { font-size: 14px; }
+
+    /* Ring */
+    .ring-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .ring {
+      width: 120px;
+      height: 120px;
+      flex: 0 0 auto;
+      position: relative;
+    }
+    .ring svg { width: 120px; height: 120px; transform: rotate(-90deg); }
+    .ring .center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .ring .center .big {
+      font-size: 28px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .ring .center .unit {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Lists */
+    .list-item {
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 10px 0;
+      font-size: 13px;
+    }
+    .list-item:first-child { border-top: 0; }
+    .list-item .date {
+      color: var(--green);
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .chart-wrap { width: 100%; overflow-x: auto; }
+    svg text { font-size: 11px; fill: var(--muted); }
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 18px;
+    }
+    .danger-note { color: var(--danger); font-weight: 600; }
+    .amber-note { color: var(--amber); font-weight: 600; }
+    ul.plain {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    ul.plain li { margin: 6px 0; }
+    .section-hidden { display: none !important; }
+    .mono { font-variant-numeric: tabular-nums; }
+    .kpi-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div id="gate" class="gate"></div>
+  <div id="app" class="wrap section-hidden"></div>
+  <div id="nav" class="nav section-hidden"></div>
+
+  <script>
+    // ====== 配置区（可改） ======
+    // 访问口令：打开网页后输入正确口令才能使用
+    const ACCESS_PASSWORD = "houyao8";
+    // Supabase（可选）。项目失效时自动改用本机 localStorage，不影响使用。
+    const SUPABASE_URL = "https://eldwhmgmsxoiaqecjepw.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_vFx5HuWk7UkdYvUEaMiHEw_Ox6oFtBs";
+    // 校园跑：每次 2 公里，一学期目标 48 次；run_base 是「未在本页记录过」的已有次数
+    const RUN_TARGET = 48;
+    const RUN_BASE = 2;
+    const RUN_DISTANCE_KM = 2;
+
+    // ====== 四周训练计划（低冲击 · 罗德里式后腰） ======
+    const WEEKLY_PLAN = {
+      1: {
+        name: "第 1 周 · 打基础",
+        focus: "动作质量优先，不追求量",
+        days: [
+          { label: "周一", title: "触球与接球转身", tasks: [
+            "脚踝活动度 6 分钟（无痛）：脚尖写字、提踵离心、弹力带背屈、单腿平衡",
+            "对墙一脚出球方向：左右脚各 30 次，先把球推向开阔侧",
+            "半转身接球出球：背对墙向弱脚侧转，2 组 × 15 次",
+            "扫描习惯：接球前口头报身后标志颜色，20 次"
+          ]},
+          { label: "周二", title: "有氧 + 脚踝", tasks: [
+            "校园跑 2 公里 或 快走/游泳/骑行/椭圆机 30 分钟（能说话的心率）",
+            "脚踝活动度 6 分钟",
+            "原地控球 10 分钟（不跳跃）"
+          ]},
+          { label: "周三", title: "抗逼抢出球", tasks: [
+            "脚踝活动度 6 分钟",
+            "对墙传球：双脚各 40 次，控落点与力度",
+            "标志桶逼抢：背身接球 → 护球半转身 → 两翼出球，2 组 × 12 次",
+            "原地长传转移 20 次，体会调度节奏"
+          ]},
+          { label: "周四", title: "力量 · 核心与单腿", tasks: [
+            "核心抗旋转：死虫、鸟狗、侧桥各 2 组",
+            "分腿蹲 2 组 × 10 次 / 腿",
+            "单腿罗马尼亚硬拉 2 组 × 10 次 / 腿",
+            "台阶提踵离心 2 组 × 12 次",
+            "软垫单腿平衡 3 组 × 30 秒 / 腿"
+          ]},
+          { label: "周五", title: "有氧 + 控球", tasks: [
+            "校园跑 2 公里 或 低冲击有氧 30 分钟",
+            "原地控球 + 对墙触球 10 分钟",
+            "脚踝活动度 6 分钟"
+          ]},
+          { label: "周六", title: "比赛日 · 观察点①", tasks: [
+            "全场只观察一件事：接球前是否先扫描",
+            "赛后只记一个最想改的球，不纠结胜负"
+          ]},
+          { label: "周日", title: "复盘 + 恢复", tasks: [
+            "赛后 15 分钟复盘：做得好 / 要改 / 下周练",
+            "脚踝活动度 6 分钟",
+            "晨起空腹记体重"
+          ]}
+        ]
+      },
+      2: {
+        name: "第 2 周 · 稳步加量",
+        focus: "在动作不变形的前提下 +10% 量",
+        days: [
+          { label: "周一", title: "触球与接球转身", tasks: [
+            "脚踝活动度 6 分钟",
+            "对墙一脚出球方向：左右脚各 40 次",
+            "半转身接球出球：2 组 × 20 次",
+            "扫描后出球：30 次"
+          ]},
+          { label: "周二", title: "有氧 + 脚踝", tasks: [
+            "校园跑 2 公里 或 有氧 35 分钟",
+            "脚踝活动度 6 分钟",
+            "原地控球 12 分钟"
+          ]},
+          { label: "周三", title: "抗逼抢出球", tasks: [
+            "脚踝活动度 6 分钟",
+            "对墙传球：双脚各 50 次",
+            "标志桶护球半转身出球：2 组 × 15 次",
+            "原地长传转移 25 次"
+          ]},
+          { label: "周四", title: "力量 · 核心与单腿", tasks: [
+            "核心抗旋转：死虫、鸟狗、侧桥各 3 组",
+            "分腿蹲 2 组 × 12 次 / 腿",
+            "单腿罗马尼亚硬拉 2 组 × 12 次 / 腿",
+            "台阶提踵离心 2 组 × 15 次",
+            "软垫单腿平衡 3 组 × 40 秒 / 腿"
+          ]},
+          { label: "周五", title: "有氧 + 控球", tasks: [
+            "校园跑 2 公里 或 有氧 35 分钟",
+            "原地控球 + 对墙触球 12 分钟",
+            "脚踝活动度 6 分钟"
+          ]},
+          { label: "周六", title: "比赛日 · 观察点②", tasks: [
+            "全场只观察一件事：第一脚触球是否朝开阔侧",
+            "赛后记一个最想改的球"
+          ]},
+          { label: "周日", title: "复盘 + 恢复", tasks: [
+            "赛后 15 分钟复盘",
+            "脚踝活动度 6 分钟",
+            "记体重"
+          ]}
+        ]
+      },
+      3: {
+        name: "第 3 周 · 弱脚与对抗",
+        focus: "弱脚比重和逼抢强度上来",
+        days: [
+          { label: "周一", title: "触球与弱脚", tasks: [
+            "脚踝活动度 6 分钟",
+            "弱脚一脚触球比重 ≥ 40%，左右脚各 40 次",
+            "弱脚侧半转身接球：2 组 × 15 次",
+            "扫描 + 出球 30 次"
+          ]},
+          { label: "周二", title: "有氧 + 脚踝", tasks: [
+            "校园跑 2 公里 或 有氧 40 分钟",
+            "脚踝活动度 6 分钟",
+            "原地控球 15 分钟"
+          ]},
+          { label: "周三", title: "抗逼抢出球", tasks: [
+            "脚踝活动度 6 分钟",
+            "2v1 圈抢（有球友）或标志桶模拟逼抢：4 组 × 3 分钟",
+            "背身 1v1 接球转身",
+            "弱脚对墙传球：双脚各 30 次"
+          ]},
+          { label: "周四", title: "力量 · 进阶", tasks: [
+            "核心抗旋转（加重/加时）：各 3 组",
+            "分腿蹲 2 组 × 12 次 / 腿",
+            "单腿罗马尼亚硬拉 2 组 × 12 次 / 腿",
+            "台阶提踵离心 2 组 × 15 次",
+            "闭眼单腿平衡 3 组 × 20 秒 / 腿"
+          ]},
+          { label: "周五", title: "有氧 + 控球", tasks: [
+            "校园跑 2 公里 或 有氧 40 分钟",
+            "原地控球 + 对墙触球 15 分钟",
+            "脚踝活动度 6 分钟"
+          ]},
+          { label: "周六", title: "比赛日 · 观察点③", tasks: [
+            "全场只观察一件事：被逼抢时是否先护球",
+            "赛后记一个最想改的球"
+          ]},
+          { label: "周日", title: "复盘 + 恢复", tasks: [
+            "赛后 15 分钟复盘",
+            "脚踝活动度 6 分钟",
+            "记体重"
+          ]}
+        ]
+      },
+      4: {
+        name: "第 4 周 · 综合检验",
+        focus: "把前三周能力拼进比赛",
+        days: [
+          { label: "周一", title: "触球综合", tasks: [
+            "脚踝活动度 6 分钟",
+            "对墙一脚出球方向：左右脚各 50 次",
+            "半转身接球出球：2 组 × 20 次",
+            "扫描 + 出球 40 次"
+          ]},
+          { label: "周二", title: "有氧 + 脚踝", tasks: [
+            "校园跑 2 公里 或 有氧 40 分钟",
+            "脚踝活动度 6 分钟",
+            "原地控球 15 分钟"
+          ]},
+          { label: "周三", title: "抗逼抢出球", tasks: [
+            "脚踝活动度 6 分钟",
+            "圈抢或标志桶模拟逼抢：4 组 × 4 分钟",
+            "背身接球转身 + 两翼出球",
+            "弱脚对墙传球：双脚各 40 次"
+          ]},
+          { label: "周四", title: "力量 · 全套", tasks: [
+            "核心抗旋转：各 3 组",
+            "分腿蹲 3 组 × 10 次 / 腿",
+            "单腿罗马尼亚硬拉 3 组 × 10 次 / 腿",
+            "台阶提踵离心 3 组 × 12 次",
+            "软垫单腿平衡 3 组 × 40 秒 / 腿"
+          ]},
+          { label: "周五", title: "有氧 + 控球", tasks: [
+            "校园跑 2 公里 或 有氧 40 分钟",
+            "原地控球 + 对墙触球 15 分钟",
+            "脚踝活动度 6 分钟"
+          ]},
+          { label: "周六", title: "比赛日 · 观察点④", tasks: [
+            "全场只观察一件事：失误后是否立刻反抢",
+            "赛后记一个最想改的球"
+          ]},
+          { label: "周日", title: "复盘 + 下一循环", tasks: [
+            "赛后 15 分钟复盘",
+            "脚踝活动度 6 分钟",
+            "记体重；下一轮回到第 1 周，量再 +10–20%"
+          ]}
+        ]
+      }
+    };
+
+    const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+    const TABS = [
+      { id: "today", label: "今日" },
+      { id: "plan", label: "计划" },
+      { id: "run", label: "校园跑" },
+      { id: "weight", label: "体重" },
+      { id: "review", label: "复盘" }
+    ];
+
+    let sb = null;
+    let storageMode = "local"; // local | cloud
+    let state = {
+      tab: "today",
+      currentWeek: 1,
+      weekDates: [],
+      checkins: {}, // "YYYY-MM-DD::taskId" -> boolean
+      weights: [],
+      reviews: [],
+      runs: [],
+      runBase: RUN_BASE,
+      runTarget: RUN_TARGET
+    };
+
+    function $(sel) { return document.querySelector(sel); }
+    function toISO(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return y + "-" + m + "-" + day;
+    }
+    function getMonday(d) {
+      const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const diff = (c.getDay() === 0 ? -6 : 1 - c.getDay());
+      c.setDate(c.getDate() + diff);
+      return c;
+    }
+    function fmtDate(d) {
+      return (d.getMonth() + 1) + "月" + d.getDate() + "日 " + WEEKDAYS[d.getDay()];
+    }
+    function hash(s) {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return h;
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+    function refreshWeekDates() {
+      const monday = getMonday(new Date());
+      state.weekDates = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        state.weekDates.push(d);
+      }
+    }
+    function taskId(dayIndex, text) {
+      return "w" + state.currentWeek + "-d" + dayIndex + "-" + hash(text);
+    }
+    function keyFor(date, dayIndex, text) {
+      return toISO(date) + "::" + taskId(dayIndex, text);
+    }
+
+    // ====== 本地存储 ======
+    function localKey(name) { return "houyao::" + name; }
+    function localLoad() {
+      try {
+        const raw = localStorage.getItem(localKey("db"));
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
+    function localSave(db) {
+      localStorage.setItem(localKey("db"), JSON.stringify(db));
+    }
+    function localDb() {
+      return localLoad() || {
+        settings: { current_week: 1, run_base: RUN_BASE, run_target: RUN_TARGET },
+        checkins: [],
+        weights: [],
+        reviews: [],
+        runs: []
+      };
+    }
+
+    // ====== 口令门 ======
+    function unlocked() {
+      return sessionStorage.getItem(localKey("auth")) === "1";
+    }
+    function renderGate() {
+      const gate = $("#gate");
+      gate.classList.remove("section-hidden");
+      $("#app").classList.add("section-hidden");
+      $("#nav").classList.add("section-hidden");
+      gate.innerHTML = `
+        <div class="gate-card">
+          <h1>后腰训练台</h1>
+          <p>输入访问口令后进入。口令只存在这台设备的当前会话里。</p>
+          <label class="field">访问口令</label>
+          <input type="password" id="gate-pass" placeholder="请输入口令" autocomplete="current-password" />
+          <div style="height:12px"></div>
+          <button class="btn block" id="gate-go">进入</button>
+          <div id="gate-msg" class="muted" style="margin-top:10px"></div>
+        </div>`;
+      const go = () => {
+        const val = ($("#gate-pass").value || "").trim();
+        if (val === ACCESS_PASSWORD) {
+          sessionStorage.setItem(localKey("auth"), "1");
+          bootApp();
+        } else {
+          $("#gate-msg").textContent = "口令不对，再试一次。";
+        }
+      };
+      $("#gate-go").onclick = go;
+      $("#gate-pass").addEventListener("keydown", e => {
+        if (e.key === "Enter") go();
+      });
+    }
+
+    // ====== 云端初始化 ======
+    function initSupabase() {
+      if (SUPABASE_URL.includes("PASTE_") || SUPABASE_ANON_KEY.includes("PASTE_")) {
+        storageMode = "local";
+        return false;
+      }
+      if (!window.supabase) {
+        storageMode = "local";
+        return false;
+      }
+      try {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return true;
+      } catch (e) {
+        sb = null;
+        storageMode = "local";
+        return false;
+      }
+    }
+
+    async function cloudPing() {
+      if (!sb) return false;
+      try {
+        const { error } = await sb.from("settings").select("id").limit(1);
+        return !error;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // ====== 数据读写（本地优先，云端可用则双写） ======
+    async function loadAll() {
+      refreshWeekDates();
+      const db = localDb();
+      state.currentWeek = db.settings.current_week || 1;
+      state.runBase = db.settings.run_base != null ? db.settings.run_base : RUN_BASE;
+      state.runTarget = db.settings.run_target || RUN_TARGET;
+      state.checkins = {};
+      db.checkins.forEach(r => {
+        state.checkins[r.checkin_date + "::" + r.task_id] = !!r.done;
+      });
+      // 本周打卡也要能跨周显示：加载近 28 天
+      state.weights = (db.weights || []).slice().sort((a, b) => a.recorded_on.localeCompare(b.recorded_on));
+      state.reviews = (db.reviews || []).slice().sort((a, b) => b.review_date.localeCompare(a.review_date));
+      state.runs = (db.runs || []).slice().sort((a, b) => b.run_date.localeCompare(a.run_date));
+
+      if (sb) {
+        const ok = await cloudPing();
+        if (ok) {
+          storageMode = "cloud";
+          await loadFromCloud();
+        } else {
+          storageMode = "local";
+        }
+      } else {
+        storageMode = "local";
+      }
+      render();
+    }
+
+    async function loadFromCloud() {
+      const monday = getMonday(new Date());
+      const start = new Date(monday);
+      start.setDate(start.getDate() - 21);
+      const [settings, checkins, weights, reviews, runs] = await Promise.all([
+        sb.from("settings").select("*").eq("id", 1).maybeSingle(),
+        sb.from("checkins").select("task_id,checkin_date,done")
+          .gte("checkin_date", toISO(start)),
+        sb.from("weights").select("recorded_on,weight_kg").order("recorded_on", { ascending: true }),
+        sb.from("reviews").select("review_date,good,fix,next").order("review_date", { ascending: false }).limit(20),
+        sb.from("runs").select("run_date,duration_min,note,distance_km").order("run_date", { ascending: false })
+      ]);
+      if (settings.data) {
+        if (settings.data.current_week) state.currentWeek = settings.data.current_week;
+        if (settings.data.run_base != null) state.runBase = settings.data.run_base;
+        if (settings.data.run_target) state.runTarget = settings.data.run_target;
+      }
+      if (checkins.data) {
+        state.checkins = {};
+        checkins.data.forEach(r => {
+          state.checkins[r.checkin_date + "::" + r.task_id] = !!r.done;
+        });
+      }
+      if (weights.data) state.weights = weights.data;
+      if (reviews.data) state.reviews = reviews.data;
+      if (runs.data) state.runs = runs.data;
+    }
+
+    function persistLocal() {
+      const db = {
+        settings: {
+          current_week: state.currentWeek,
+          run_base: state.runBase,
+          run_target: state.runTarget
+        },
+        checkins: Object.keys(state.checkins).map(k => {
+          const [checkin_date, task_id] = k.split("::");
+          return { checkin_date, task_id, done: !!state.checkins[k] };
+        }).filter(r => r.done),
+        weights: state.weights,
+        reviews: state.reviews,
+        runs: state.runs
+      };
+      localSave(db);
+    }
+
+    async function toggleCheckin(id, date, done) {
+      state.checkins[date + "::" + id] = done;
+      persistLocal();
+      if (storageMode === "cloud" && sb) {
+        const { error } = await sb.from("checkins").upsert(
+          { checkin_date: date, task_id: id, done },
+          { onConflict: "checkin_date,task_id" }
+        );
+        if (error) console.warn(error);
+      }
+      render();
+    }
+
+    async function setWeek(n) {
+      state.currentWeek = n;
+      persistLocal();
+      if (storageMode === "cloud" && sb) {
+        await sb.from("settings").upsert({ id: 1, current_week: n }, { onConflict: "id" });
+      }
+      render();
+    }
+
+    async function saveWeight() {
+      const d = $("#weight-date").value || toISO(new Date());
+      const w = parseFloat($("#weight-input").value);
+      const msg = $("#weight-msg");
+      if (!w || w < 30 || w > 300) { msg.textContent = "请输入有效体重（kg）。"; return; }
+      const rec = { recorded_on: d, weight_kg: Math.round(w * 10) / 10 };
+      state.weights = state.weights.filter(r => r.recorded_on !== d).concat([rec])
+        .sort((a, b) => a.recorded_on.localeCompare(b.recorded_on));
+      persistLocal();
+      if (storageMode === "cloud" && sb) {
+        const { error } = await sb.from("weights").upsert(rec, { onConflict: "recorded_on" });
+        if (error) { msg.textContent = "云端保存失败：" + error.message; return; }
+      }
+      msg.textContent = "已记录 " + rec.weight_kg + " kg";
+      $("#weight-input").value = "";
+      render();
+    }
+
+    async function saveReview() {
+      const d = $("#review-date").value || toISO(new Date());
+      const good = $("#review-good").value.trim();
+      const fix = $("#review-fix").value.trim();
+      const next = $("#review-next").value.trim();
+      const msg = $("#review-msg");
+      if (!good && !fix && !next) { msg.textContent = "至少填写一项再保存。"; return; }
+      const rec = { review_date: d, good, fix, next };
+      state.reviews = [rec].concat(state.reviews).slice(0, 30);
+      persistLocal();
+      if (storageMode === "cloud" && sb) {
+        const { error } = await sb.from("reviews").insert(rec);
+        if (error) { msg.textContent = "云端保存失败：" + error.message; return; }
+      }
+      msg.textContent = "已保存复盘。";
+      $("#review-good").value = "";
+      $("#review-fix").value = "";
+      $("#review-next").value = "";
+      render();
+    }
+
+    async function logRun(opts) {
+      opts = opts || {};
+      const d = opts.date || ($("#run-date") && $("#run-date").value) || toISO(new Date());
+      const duration = opts.duration != null ? opts.duration
+        : (($("#run-duration") && parseFloat($("#run-duration").value)) || null);
+      const note = opts.note != null ? opts.note
+        : (($("#run-note") && $("#run-note").value || "").trim());
+      const msg = $("#run-msg");
+      if (state.runs.some(r => r.run_date === d)) {
+        if (msg) msg.textContent = "这一天已经记过校园跑了。";
+        return;
+      }
+      const rec = {
+        run_date: d,
+        distance_km: RUN_DISTANCE_KM,
+        duration_min: duration,
+        note
+      };
+      state.runs = [rec].concat(state.runs).sort((a, b) => b.run_date.localeCompare(a.run_date));
+      persistLocal();
+      if (storageMode === "cloud" && sb) {
+        const { error } = await sb.from("runs").insert(rec);
+        if (error) { if (msg) msg.textContent = "云端保存失败：" + error.message; return; }
+      }
+      if (msg) msg.textContent = "已记录 1 次校园跑（" + RUN_DISTANCE_KM + " km）";
+      if ($("#run-duration")) $("#run-duration").value = "";
+      if ($("#run-note")) $("#run-note").value = "";
+      render();
+    }
+
+    async function removeRun(date) {
+      state.runs = state.runs.filter(r => r.run_date !== date);
+      persistLocal();
+      if (storageMode === "cloud" && sb) {
+        await sb.from("runs").delete().eq("run_date", date);
+      }
+      render();
+    }
+
+    // ====== 统计 ======
+    function weekProgress() {
+      const plan = WEEKLY_PLAN[state.currentWeek];
+      let total = 0, done = 0;
+      plan.days.forEach((d, di) => {
+        const date = state.weekDates[di];
+        d.tasks.forEach(t => {
+          total += 1;
+          if (state.checkins[keyFor(date, di, t)]) done += 1;
+        });
+      });
+      return { total, done, pct: total ? Math.round(done / total * 100) : 0 };
+    }
+
+    function streakDays() {
+      // 连续有至少 1 个打卡的天数（从今天或昨天往回）
+      const days = new Set();
+      Object.keys(state.checkins).forEach(k => {
+        if (state.checkins[k]) days.add(k.split("::")[0]);
+      });
+      let streak = 0;
+      const cursor = new Date();
+      // 若今天还没打卡，从昨天起算
+      if (!days.has(toISO(cursor))) cursor.setDate(cursor.getDate() - 1);
+      while (days.has(toISO(cursor))) {
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      return streak;
+    }
+
+    function runCount() {
+      return state.runBase + state.runs.length;
+    }
+
+    function runPct() {
+      return Math.min(100, Math.round(runCount() / state.runTarget * 100));
+    }
+
+    // ====== 渲染 ======
+    function renderNav() {
+      const nav = $("#nav");
+      nav.classList.remove("section-hidden");
+      nav.innerHTML = TABS.map(t =>
+        `<button data-tab="${t.id}" class="${state.tab === t.id ? "active" : ""}">${t.label}</button>`
+      ).join("");
+      nav.querySelectorAll("button").forEach(b => {
+        b.onclick = () => { state.tab = b.dataset.tab; render(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      });
+    }
+
+    function storageBanner() {
+      if (storageMode === "cloud") {
+        return '<div class="banner ok">已连接云端 Supabase，多设备自动同步。</div>';
+      }
+      return '<div class="banner">当前使用本机存储（Supabase 未连接）。数据只保存在这台设备；重建云端项目后填入新地址即可同步。</div>';
+    }
+
+    function statsHTML() {
+      const wp = weekProgress();
+      const streak = streakDays();
+      const rc = runCount();
+      return `
+        <div class="stats">
+          <div class="stat-card">
+            <div class="num mono">${wp.pct}%</div>
+            <div class="lbl">本周完成</div>
+          </div>
+          <div class="stat-card">
+            <div class="num mono" style="color:var(--amber)">${streak}</div>
+            <div class="lbl">连续打卡天</div>
+          </div>
+          <div class="stat-card">
+            <div class="num mono" style="color:var(--green)">${rc}<span style="font-size:14px;opacity:.7">/${state.runTarget}</span></div>
+            <div class="lbl">校园跑</div>
+          </div>
+        </div>`;
+    }
+
+    function headerHTML() {
+      return `
+        <header class="top">
+          <div class="brand-row">
+            <div>
+              <h1>后腰训练台</h1>
+              <p class="sub">罗德里式后腰 · 低冲击减脂 · 校园跑</p>
+            </div>
+            <div class="streak-chip">🔥 连续 ${streakDays()} 天</div>
+          </div>
+          ${statsHTML()}
+        </header>`;
+    }
+
+    function todayHTML() {
+      const todayIdx = (new Date().getDay() + 6) % 7;
+      const todayDay = WEEKLY_PLAN[state.currentWeek].days[todayIdx];
+      const date = state.weekDates[todayIdx] || new Date();
+      const wp = weekProgress();
+      const tasksHTML = todayDay.tasks.map(t => {
+        const id = taskId(todayIdx, t);
+        const done = !!state.checkins[keyFor(date, todayIdx, t)];
+        return `
+          <button class="quick-task ${done ? "done" : ""}" data-quick="${id}">
+            <div class="box">✓</div>
+            <div class="txt">${escapeHtml(t)}</div>
+          </button>`;
+      }).join("");
+
+      return `
+        ${headerHTML()}
+        ${storageBanner()}
+        <div class="card">
+          <h2>今日速记 <span class="pill">点一下就打卡</span></h2>
+          <div class="muted" style="margin-bottom:10px">${fmtDate(new Date())} · ${todayDay.label} · ${todayDay.title}</div>
+          ${tasksHTML}
+          <div class="progress"><div style="width:${wp.pct}%"></div></div>
+          <div class="kpi-line"><span>本周 ${wp.done}/${wp.total}</span><span>${wp.pct}%</span></div>
+        </div>
+
+        <div class="card">
+          <h2>阶段原则 <span class="pill amber">减脂主线</span></h2>
+          <p class="muted" style="margin:0 0 8px">
+            大体重 + 脚踝旧伤，阶段一以<strong>低冲击减脂</strong>为主：护关节、保球感与出球。
+            体重进入更安全区间、脚踝稳定后，再加慢跑与对抗。
+          </p>
+          <p class="amber-note" style="margin:0 0 4px">阶段一避免：跳跃、急停变向、长时间连续跑。</p>
+          <p class="danger-note" style="margin:0">脚踝疼痛立即停止并就医。</p>
+        </div>
+
+        <div class="card">
+          <h2>校园跑快记</h2>
+          <div class="ring-wrap">
+            <div class="ring">
+              <svg viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"></circle>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--green)" stroke-width="10"
+                  stroke-linecap="round"
+                  stroke-dasharray="${2 * Math.PI * 52}"
+                  stroke-dashoffset="${2 * Math.PI * 52 * (1 - runPct() / 100)}"></circle>
+              </svg>
+              <div class="center">
+                <div class="big">${runCount()}</div>
+                <div class="unit">/ ${state.runTarget} 次</div>
+              </div>
+            </div>
+            <div style="flex:1">
+              <div class="muted">每次 2 公里 · 本学期</div>
+              <div style="font-size:22px;font-weight:800;margin:4px 0">还差 ${Math.max(0, state.runTarget - runCount())} 次</div>
+              <button class="btn amber small" id="quick-run">记一次今日校园跑</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function planHTML() {
+      const wp = weekProgress();
+      const tabs = [1, 2, 3, 4].map(n =>
+        `<button class="tab ${n === state.currentWeek ? "active" : ""}" data-week="${n}">第 ${n} 周</button>`
+      ).join("");
+      const todayIdx = (new Date().getDay() + 6) % 7;
+      const daysHTML = WEEKLY_PLAN[state.currentWeek].days.map((d, i) => {
+        const date = state.weekDates[i];
+        const isToday = i === todayIdx;
+        const tasksHTML = d.tasks.map(t => {
+          const id = taskId(i, t);
+          const done = !!state.checkins[keyFor(date, i, t)];
+          return `
+            <label class="task ${done ? "done" : ""}">
+              <input type="checkbox" data-task="${id}" ${done ? "checked" : ""} />
+              <span>${escapeHtml(t)}</span>
+            </label>`;
+        }).join("");
+        return `
+          <div class="day ${isToday ? "today" : ""}">
+            <div class="day-head">
+              <b>${d.label} · ${d.title}</b>
+              <span>${fmtDate(date)}</span>
+            </div>
+            ${tasksHTML}
+          </div>`;
+      }).join("");
+
+      return `
+        ${headerHTML()}
+        <div class="card">
+          <h2>四周训练计划 <span class="pill">${WEEKLY_PLAN[state.currentWeek].focus}</span></h2>
+          <div class="tabs">${tabs}</div>
+          <div class="progress"><div style="width:${wp.pct}%"></div></div>
+          <div class="kpi-line" style="margin-bottom:12px">
+            <span>${WEEKLY_PLAN[state.currentWeek].name}</span>
+            <span>${wp.done}/${wp.total} · ${wp.pct}%</span>
+          </div>
+          ${daysHTML}
+        </div>
+
+        <div class="card">
+          <h2>脚踝活动度（每天 6 分钟，无痛）</h2>
+          <ul class="plain">
+            <li>脚尖写字母：坐姿空中写 A–Z，每脚 1–2 组</li>
+            <li>台阶提踵离心：快起、3 秒慢放，2 组 × 10–15 次</li>
+            <li>弹力带背屈/抗阻：2 组 × 12 次</li>
+            <li>单腿平衡：睁眼 30 秒 → 闭眼进阶，每腿 3 组</li>
+          </ul>
+        </div>`;
+    }
+
+    function runHTML() {
+      const rc = runCount();
+      const left = Math.max(0, state.runTarget - rc);
+      const list = state.runs.length
+        ? state.runs.map(r => `
+            <div class="list-item">
+              <div class="date">${r.run_date} · ${r.distance_km || 2} km${r.duration_min ? " · " + r.duration_min + " 分钟" : ""}</div>
+              <div class="muted">${escapeHtml(r.note || "校园跑")}</div>
+              <div style="margin-top:6px">
+                <button class="btn ghost small" data-del-run="${r.run_date}">删除</button>
+              </div>
+            </div>`).join("")
+        : '<div class="muted">还没有在本页记录校园跑。已有的 ' + state.runBase + ' 次算在进度里。</div>';
+
+      return `
+        ${headerHTML()}
+        <div class="card">
+          <h2>校园跑进度 <span class="pill">2 km / 次</span></h2>
+          <div class="ring-wrap">
+            <div class="ring">
+              <svg viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"></circle>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--green)" stroke-width="10"
+                  stroke-linecap="round"
+                  stroke-dasharray="${2 * Math.PI * 52}"
+                  stroke-dashoffset="${2 * Math.PI * 52 * (1 - runPct() / 100)}"></circle>
+              </svg>
+              <div class="center">
+                <div class="big">${rc}</div>
+                <div class="unit">/ ${state.runTarget} 次</div>
+              </div>
+            </div>
+            <div style="flex:1">
+              <div class="muted">本学期目标 ${state.runTarget} 次</div>
+              <div style="font-size:28px;font-weight:800;margin:6px 0">${runPct()}%</div>
+              <div class="muted">还差 ${left} 次 · 约 ${left * RUN_DISTANCE_KM} 公里</div>
+            </div>
+          </div>
+          <div class="progress"><div style="width:${runPct()}%"></div></div>
+        </div>
+
+        <div class="card">
+          <h2>记一次校园跑</h2>
+          <label class="field">日期</label>
+          <input type="date" id="run-date" />
+          <div class="row">
+            <div>
+              <label class="field">用时（分钟，可选）</label>
+              <input type="number" id="run-duration" step="0.5" placeholder="如 14" />
+            </div>
+            <div>
+              <label class="field">备注（可选）</label>
+              <input type="text" id="run-note" placeholder="如 操场东跑" />
+            </div>
+          </div>
+          <div style="height:12px"></div>
+          <button class="btn block" id="save-run">记录校园跑</button>
+          <div id="run-msg" class="muted" style="margin-top:8px"></div>
+        </div>
+
+        <div class="card">
+          <h2>历史记录</h2>
+          ${list}
+        </div>`;
+    }
+
+    function weightHTML() {
+      return `
+        ${headerHTML()}
+        <div class="card">
+          <h2>减脂管理 <span class="pill amber">看周趋势</span></h2>
+          <ul class="plain" style="margin-bottom:12px">
+            <li>每天热量缺口 300–500 大卡</li>
+            <li>蛋白质每餐一掌，多蔬菜</li>
+            <li>少油炸、少含糖饮料，规律三餐</li>
+            <li>目标每周减 0.5–1kg，别被单日波动带节奏</li>
+          </ul>
+          <label class="field">日期</label>
+          <input type="date" id="weight-date" />
+          <label class="field">体重（kg）</label>
+          <input type="number" id="weight-input" step="0.1" placeholder="如 107.5" />
+          <div style="height:12px"></div>
+          <button class="btn block" id="save-weight">记录体重</button>
+          <div id="weight-msg" class="muted" style="margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <h2>体重趋势</h2>
+          <div class="chart-wrap">
+            <svg id="weight-chart" width="760" height="190" viewBox="0 0 760 190"></svg>
+          </div>
+          <div id="weight-list" class="muted" style="margin-top:8px"></div>
+        </div>`;
+    }
+
+    function reviewHTML() {
+      const list = state.reviews.length
+        ? state.reviews.map(r => `
+            <div class="list-item">
+              <div class="date">${r.review_date}</div>
+              ${r.good ? "<div>做得好：" + escapeHtml(r.good) + "</div>" : ""}
+              ${r.fix ? "<div>要改：" + escapeHtml(r.fix) + "</div>" : ""}
+              ${r.next ? "<div>下周练：" + escapeHtml(r.next) + "</div>" : ""}
+            </div>`).join("")
+        : '<div class="muted">还没有复盘记录。</div>';
+
+      return `
+        ${headerHTML()}
+        <div class="card">
+          <h2>赛后复盘 <span class="pill">15 分钟</span></h2>
+          <label class="field">日期</label>
+          <input type="date" id="review-date" />
+          <label class="field">做得好的一个球</label>
+          <textarea id="review-good" placeholder="哪个处理让你满意？"></textarea>
+          <label class="field">要改的一个球</label>
+          <textarea id="review-fix" placeholder="哪个球可以处理得更好？"></textarea>
+          <label class="field">下周再练的一个点</label>
+          <textarea id="review-next" placeholder="下周最想练什么？"></textarea>
+          <div style="height:12px"></div>
+          <button class="btn block" id="save-review">保存复盘</button>
+          <div id="review-msg" class="muted" style="margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <h2>最近复盘</h2>
+          ${list}
+        </div>`;
+    }
+
+    function renderWeights() {
+      const svg = $("#weight-chart");
+      const list = $("#weight-list");
+      if (!svg || !list) return;
+      const data = state.weights;
+      list.innerHTML = data.length
+        ? "最近：" + data.slice(-5).map(r => r.recorded_on + " → " + r.weight_kg + "kg").join(" · ")
+        : "还没有记录。";
+      svg.innerHTML = "";
+      if (data.length < 2) {
+        svg.innerHTML = '<text x="20" y="30">至少记录两次体重后显示趋势线</text>';
+        return;
+      }
+      const W = 760, H = 190, padL = 34, padR = 20, padT = 18, padB = 28;
+      const vals = data.map(r => Number(r.weight_kg));
+      let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+      const span = max - min || 1;
+      min -= span * 0.2; max += span * 0.2;
+      const x = i => padL + i * (W - padL - padR) / (data.length - 1);
+      const y = v => H - padB - (v - min) * (H - padT - padB) / (max - min);
+      const pts = data.map((r, i) => x(i).toFixed(1) + "," + y(Number(r.weight_kg)).toFixed(1)).join(" ");
+      const circles = data.map((r, i) =>
+        '<circle cx="' + x(i) + '" cy="' + y(Number(r.weight_kg)) + '" r="3.5" fill="#2dd46f" />'
+      ).join("");
+      const labels = data.map((r, i) =>
+        (i % Math.max(1, Math.ceil(data.length / 8)) === 0)
+          ? '<text x="' + (x(i) - 16) + '" y="' + (H - 8) + '">' + r.recorded_on.slice(5) + "</text>"
+          : ""
+      ).join("");
+      svg.innerHTML =
+        '<polyline fill="none" stroke="#2dd46f" stroke-width="2.5" points="' + pts + '" />' +
+        circles + labels +
+        '<text x="' + padL + '" y="12">' + min.toFixed(1) + "–" + max.toFixed(1) + " kg</text>";
+    }
+
+    function render() {
+      const app = $("#app");
+      if (!unlocked()) { renderGate(); return; }
+      $("#gate").classList.add("section-hidden");
+      app.classList.remove("section-hidden");
+      renderNav();
+
+      if (state.tab === "today") app.innerHTML = todayHTML();
+      else if (state.tab === "plan") app.innerHTML = planHTML();
+      else if (state.tab === "run") app.innerHTML = runHTML();
+      else if (state.tab === "weight") app.innerHTML = weightHTML();
+      else if (state.tab === "review") app.innerHTML = reviewHTML();
+
+      bindApp();
+      if (state.tab === "weight") renderWeights();
+    }
+
+    function bindApp() {
+      document.querySelectorAll("[data-week]").forEach(btn => {
+        btn.onclick = () => setWeek(Number(btn.dataset.week));
+      });
+      document.querySelectorAll("[data-quick]").forEach(btn => {
+        btn.onclick = async () => {
+          const id = btn.dataset.quick;
+          const dayIdx = Number(id.split("-")[1].slice(1));
+          const date = state.weekDates[dayIdx];
+          const key = toISO(date) + "::" + id;
+          await toggleCheckin(id, toISO(date), !state.checkins[key]);
+        };
+      });
+      document.querySelectorAll(".task input[type='checkbox']").forEach(cb => {
+        cb.onchange = async (e) => {
+          const id = e.target.dataset.task;
+          const dayIdx = Number(id.split("-")[1].slice(1));
+          const date = state.weekDates[dayIdx];
+          await toggleCheckin(id, toISO(date), e.target.checked);
+        };
+      });
+
+      const todayISO = toISO(new Date());
+      if ($("#weight-date")) $("#weight-date").value = todayISO;
+      if ($("#review-date")) $("#review-date").value = todayISO;
+      if ($("#run-date")) $("#run-date").value = todayISO;
+
+      if ($("#save-weight")) $("#save-weight").onclick = saveWeight;
+      if ($("#save-review")) $("#save-review").onclick = saveReview;
+      if ($("#save-run")) $("#save-run").onclick = logRun;
+      if ($("#quick-run")) {
+        $("#quick-run").onclick = async () => {
+          const d = toISO(new Date());
+          if (state.runs.some(r => r.run_date === d)) {
+            state.tab = "run";
+            render();
+            return;
+          }
+          await logRun({ date: d, note: "校园跑" });
+          state.tab = "run";
+          render();
+        };
+      }
+      document.querySelectorAll("[data-del-run]").forEach(btn => {
+        btn.onclick = () => removeRun(btn.dataset.delRun);
+      });
+    }
+
+    async function bootApp() {
+      if (initSupabase()) {
+        // 先本地渲染，再尝试云端
+        await loadAll();
+      } else {
+        await loadAll();
+      }
+    }
+
+    // 启动
+    if (unlocked()) bootApp();
+    else renderGate();
+  </script>
+</body>
+</html>
