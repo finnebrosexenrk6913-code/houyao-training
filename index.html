@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0B1210" />
   <title>后腰训练台</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --bg: #0b1210;
@@ -459,9 +458,6 @@
     // ====== 配置区（可改） ======
     // 访问口令：打开网页后输入正确口令才能使用
     const ACCESS_PASSWORD = "houyao8";
-    // Supabase（可选）。项目失效时自动改用本机 localStorage，不影响使用。
-    const SUPABASE_URL = "https://eldwhmgmsxoiaqecjepw.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_vFx5HuWk7UkdYvUEaMiHEw_Ox6oFtBs";
     // 校园跑：每次 2 公里，一学期目标 48 次；run_base 是「未在本页记录过」的已有次数
     const RUN_TARGET = 48;
     const RUN_BASE = 2;
@@ -656,8 +652,6 @@
       { id: "review", label: "复盘" }
     ];
 
-    let sb = null;
-    let storageMode = "local"; // local | cloud
     let state = {
       tab: "today",
       currentWeek: 1,
@@ -767,38 +761,8 @@
       });
     }
 
-    // ====== 云端初始化 ======
-    function initSupabase() {
-      if (SUPABASE_URL.includes("PASTE_") || SUPABASE_ANON_KEY.includes("PASTE_")) {
-        storageMode = "local";
-        return false;
-      }
-      if (!window.supabase) {
-        storageMode = "local";
-        return false;
-      }
-      try {
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        return true;
-      } catch (e) {
-        sb = null;
-        storageMode = "local";
-        return false;
-      }
-    }
-
-    async function cloudPing() {
-      if (!sb) return false;
-      try {
-        const { error } = await sb.from("settings").select("id").limit(1);
-        return !error;
-      } catch (e) {
-        return false;
-      }
-    }
-
-    // ====== 数据读写（本地优先，云端可用则双写） ======
-    async function loadAll() {
+    // ====== 数据读写（本机 localStorage） ======
+    function loadAll() {
       refreshWeekDates();
       const db = localDb();
       state.currentWeek = db.settings.current_week || 1;
@@ -808,55 +772,14 @@
       db.checkins.forEach(r => {
         state.checkins[r.checkin_date + "::" + r.task_id] = !!r.done;
       });
-      // 本周打卡也要能跨周显示：加载近 28 天
       state.weights = (db.weights || []).slice().sort((a, b) => a.recorded_on.localeCompare(b.recorded_on));
       state.reviews = (db.reviews || []).slice().sort((a, b) => b.review_date.localeCompare(a.review_date));
       state.runs = (db.runs || []).slice().sort((a, b) => b.run_date.localeCompare(a.run_date));
-
-      if (sb) {
-        const ok = await cloudPing();
-        if (ok) {
-          storageMode = "cloud";
-          await loadFromCloud();
-        } else {
-          storageMode = "local";
-        }
-      } else {
-        storageMode = "local";
-      }
       render();
     }
 
-    async function loadFromCloud() {
-      const monday = getMonday(new Date());
-      const start = new Date(monday);
-      start.setDate(start.getDate() - 21);
-      const [settings, checkins, weights, reviews, runs] = await Promise.all([
-        sb.from("settings").select("*").eq("id", 1).maybeSingle(),
-        sb.from("checkins").select("task_id,checkin_date,done")
-          .gte("checkin_date", toISO(start)),
-        sb.from("weights").select("recorded_on,weight_kg").order("recorded_on", { ascending: true }),
-        sb.from("reviews").select("review_date,good,fix,next").order("review_date", { ascending: false }).limit(20),
-        sb.from("runs").select("run_date,duration_min,note,distance_km").order("run_date", { ascending: false })
-      ]);
-      if (settings.data) {
-        if (settings.data.current_week) state.currentWeek = settings.data.current_week;
-        if (settings.data.run_base != null) state.runBase = settings.data.run_base;
-        if (settings.data.run_target) state.runTarget = settings.data.run_target;
-      }
-      if (checkins.data) {
-        state.checkins = {};
-        checkins.data.forEach(r => {
-          state.checkins[r.checkin_date + "::" + r.task_id] = !!r.done;
-        });
-      }
-      if (weights.data) state.weights = weights.data;
-      if (reviews.data) state.reviews = reviews.data;
-      if (runs.data) state.runs = runs.data;
-    }
-
-    function persistLocal() {
-      const db = {
+    function saveDb() {
+      localSave({
         settings: {
           current_week: state.currentWeek,
           run_base: state.runBase,
@@ -869,33 +792,22 @@
         weights: state.weights,
         reviews: state.reviews,
         runs: state.runs
-      };
-      localSave(db);
+      });
     }
 
-    async function toggleCheckin(id, date, done) {
+    function toggleCheckin(id, date, done) {
       state.checkins[date + "::" + id] = done;
-      persistLocal();
-      if (storageMode === "cloud" && sb) {
-        const { error } = await sb.from("checkins").upsert(
-          { checkin_date: date, task_id: id, done },
-          { onConflict: "checkin_date,task_id" }
-        );
-        if (error) console.warn(error);
-      }
+      saveDb();
       render();
     }
 
-    async function setWeek(n) {
+    function setWeek(n) {
       state.currentWeek = n;
-      persistLocal();
-      if (storageMode === "cloud" && sb) {
-        await sb.from("settings").upsert({ id: 1, current_week: n }, { onConflict: "id" });
-      }
+      saveDb();
       render();
     }
 
-    async function saveWeight() {
+    function saveWeight() {
       const d = $("#weight-date").value || toISO(new Date());
       const w = parseFloat($("#weight-input").value);
       const msg = $("#weight-msg");
@@ -903,17 +815,13 @@
       const rec = { recorded_on: d, weight_kg: Math.round(w * 10) / 10 };
       state.weights = state.weights.filter(r => r.recorded_on !== d).concat([rec])
         .sort((a, b) => a.recorded_on.localeCompare(b.recorded_on));
-      persistLocal();
-      if (storageMode === "cloud" && sb) {
-        const { error } = await sb.from("weights").upsert(rec, { onConflict: "recorded_on" });
-        if (error) { msg.textContent = "云端保存失败：" + error.message; return; }
-      }
+      saveDb();
       msg.textContent = "已记录 " + rec.weight_kg + " kg";
       $("#weight-input").value = "";
       render();
     }
 
-    async function saveReview() {
+    function saveReview() {
       const d = $("#review-date").value || toISO(new Date());
       const good = $("#review-good").value.trim();
       const fix = $("#review-fix").value.trim();
@@ -922,11 +830,7 @@
       if (!good && !fix && !next) { msg.textContent = "至少填写一项再保存。"; return; }
       const rec = { review_date: d, good, fix, next };
       state.reviews = [rec].concat(state.reviews).slice(0, 30);
-      persistLocal();
-      if (storageMode === "cloud" && sb) {
-        const { error } = await sb.from("reviews").insert(rec);
-        if (error) { msg.textContent = "云端保存失败：" + error.message; return; }
-      }
+      saveDb();
       msg.textContent = "已保存复盘。";
       $("#review-good").value = "";
       $("#review-fix").value = "";
@@ -934,7 +838,7 @@
       render();
     }
 
-    async function logRun(opts) {
+    function logRun(opts) {
       opts = opts || {};
       const d = opts.date || ($("#run-date") && $("#run-date").value) || toISO(new Date());
       const duration = opts.duration != null ? opts.duration
@@ -953,23 +857,16 @@
         note
       };
       state.runs = [rec].concat(state.runs).sort((a, b) => b.run_date.localeCompare(a.run_date));
-      persistLocal();
-      if (storageMode === "cloud" && sb) {
-        const { error } = await sb.from("runs").insert(rec);
-        if (error) { if (msg) msg.textContent = "云端保存失败：" + error.message; return; }
-      }
+      saveDb();
       if (msg) msg.textContent = "已记录 1 次校园跑（" + RUN_DISTANCE_KM + " km）";
       if ($("#run-duration")) $("#run-duration").value = "";
       if ($("#run-note")) $("#run-note").value = "";
       render();
     }
 
-    async function removeRun(date) {
+    function removeRun(date) {
       state.runs = state.runs.filter(r => r.run_date !== date);
-      persistLocal();
-      if (storageMode === "cloud" && sb) {
-        await sb.from("runs").delete().eq("run_date", date);
-      }
+      saveDb();
       render();
     }
 
@@ -1025,10 +922,7 @@
     }
 
     function storageBanner() {
-      if (storageMode === "cloud") {
-        return '<div class="banner ok">已连接云端 Supabase，多设备自动同步。</div>';
-      }
-      return '<div class="banner">当前使用本机存储（Supabase 未连接）。数据只保存在这台设备；重建云端项目后填入新地址即可同步。</div>';
+      return '<div class="banner">数据保存在本机浏览器，不上传云端。换设备或清理浏览器数据会丢记录。</div>';
     }
 
     function statsHTML() {
@@ -1368,7 +1262,7 @@
           const dayIdx = Number(id.split("-")[1].slice(1));
           const date = state.weekDates[dayIdx];
           const key = toISO(date) + "::" + id;
-          await toggleCheckin(id, toISO(date), !state.checkins[key]);
+          toggleCheckin(id, toISO(date), !state.checkins[key]);
         };
       });
       document.querySelectorAll(".task input[type='checkbox']").forEach(cb => {
@@ -1376,7 +1270,7 @@
           const id = e.target.dataset.task;
           const dayIdx = Number(id.split("-")[1].slice(1));
           const date = state.weekDates[dayIdx];
-          await toggleCheckin(id, toISO(date), e.target.checked);
+          toggleCheckin(id, toISO(date), e.target.checked);
         };
       });
 
@@ -1396,7 +1290,7 @@
             render();
             return;
           }
-          await logRun({ date: d, note: "校园跑" });
+          logRun({ date: d, note: "校园跑" });
           state.tab = "run";
           render();
         };
@@ -1406,13 +1300,8 @@
       });
     }
 
-    async function bootApp() {
-      if (initSupabase()) {
-        // 先本地渲染，再尝试云端
-        await loadAll();
-      } else {
-        await loadAll();
-      }
+    function bootApp() {
+      loadAll();
     }
 
     // 启动
